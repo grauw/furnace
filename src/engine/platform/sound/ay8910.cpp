@@ -1064,7 +1064,7 @@ void ay8910_device::sound_stream_update(short** outputs, int outLen)
 		{
 			tone = &m_tone[chan];
 			const int period = std::max<int>(1,tone->period);
-			tone->count += is_expanded_mode() ? 16 : 1;
+			tone->count += is_expanded_mode() ? 32 : 1;
 			while (tone->count >= period)
 			{
 				tone->duty_cycle = (tone->duty_cycle - 1) & 0x1f;
@@ -1082,9 +1082,9 @@ void ay8910_device::sound_stream_update(short** outputs, int outLen)
 			m_count_noise = 0;
 			m_prescale_noise ^= 1;
 
-			if (!m_prescale_noise || is_expanded_mode()) // AY8930 noise generator rate is twice compares as compatibility mode
+			if (is_expanded_mode()) // AY8930 noise generator rate is twice compares as compatibility mode
 			{
-        if (is_expanded_mode()) {
+        for (int i = 0; i < 2; i++) {
           // This is called "Noise value" on the docs, but is a counter whose period is determined by the LFSR.
           // Using AND/OR gates, specific periods can be "filtered" out.
           // A square wave can be generated through this behavior, which can be used for crude AM pulse width modulation.
@@ -1107,13 +1107,13 @@ void ay8910_device::sound_stream_update(short** outputs, int outLen)
               m_rng |= (feedback << 16);
           }
           m_noise_value++;
-        } else {
-          /* The Random Number Generator of the 8910 is a 17-bit shift */
-          /* register. The input to the shift register is bit0 XOR bit3 */
-          /* (bit0 is the output). This was verified on AY-3-8910 and YM2149 chips. */
-          m_rng ^= (((m_rng & 1) ^ ((m_rng >> 3) & 1)) << 17);
-          m_rng >>= 1;
         }
+      } else if (!m_prescale_noise) {
+        /* The Random Number Generator of the 8910 is a 17-bit shift */
+        /* register. The input to the shift register is bit0 XOR bit3 */
+        /* (bit0 is the output). This was verified on AY-3-8910 and YM2149 chips. */
+        m_rng ^= (((m_rng & 1) ^ ((m_rng >> 3) & 1)) << 17);
+        m_rng >>= 1;
 			}
 		}
 
